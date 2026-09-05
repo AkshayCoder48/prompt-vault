@@ -44,7 +44,7 @@ export function CommentsSection({ promptId, initialComments, commentsEnabled }: 
   useEffect(() => {
     // refetch when sort changes
     refetch(sort);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [sort]);
 
   const onSortChange = (v: string) => setSort(v as SortOption);

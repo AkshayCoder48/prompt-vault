@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, TrendingUp, ArrowRight, Clock, LayoutGrid } from "lucide-react";
+import { Search, TrendingUp, ArrowRight, Clock, LayoutGrid, Sparkles } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useAppStore } from "@/lib/store";
 import { PromptCard, PromptCardSkeleton } from "@/components/PromptCard";

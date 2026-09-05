@@ -71,7 +71,7 @@ export function PromptDetailView({ slug }: { slug: string }) {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [slug]);
 
   // track view once on load
@@ -230,7 +230,7 @@ export function PromptDetailView({ slug }: { slug: string }) {
       {prompt.imageUrl && (
         <div className="mt-6 overflow-hidden rounded-xl border border-border">
           <div className="aspect-[16/9] bg-muted">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            { }
             <img
               src={prompt.imageUrl}
               alt={prompt.imageAlt || prompt.title}

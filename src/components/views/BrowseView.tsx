@@ -86,7 +86,7 @@ export function BrowseView({
         setLoadingMore(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [q, category, tag, sort, offset]
   );
 
@@ -101,7 +101,7 @@ export function BrowseView({
       sort,
     });
     load(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [q, category, tag, sort]);
 
   // load categories + config once

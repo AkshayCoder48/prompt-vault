@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "regions": ["bom1"],
+  "env": {
+    "ONYXBASE_URL": "@onyxbase_url",
+    "ONYXBASE_API_KEY": "@onyxbase_api_key",
+    "ADMIN_SECRET": "@admin_secret",
+    "MEIGEN_BASE_URL": "@meigen_base_url",
+    "PUBLIC_BASE_URL": "@public_base_url",
+    "PUBLIC_IMAGE_URL_PREFIX": "@public_image_url_prefix"
+  }
+}

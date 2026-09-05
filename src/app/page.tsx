@@ -12,6 +12,7 @@ import { CategoryListView } from "@/components/views/CategoryListView";
 import { SavedView } from "@/components/views/SavedView";
 import { AboutView } from "@/components/views/AboutView";
 import { AdminView } from "@/components/views/AdminView";
+import { ImageDetailView } from "@/components/views/ImageDetailView";
 import { Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SiteConfig } from "@/lib/onyxbase/types";
@@ -105,6 +106,8 @@ function renderRoute(route: ReturnType<typeof useAppStore.getState>["route"]) {
       return <AboutView />;
     case "admin":
       return <AdminView />;
+    case "image":
+      return <ImageDetailView id={route.id} />;
     default:
       return <HomeView />;
   }

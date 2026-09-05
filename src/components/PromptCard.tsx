@@ -39,7 +39,7 @@ export function PromptCard({ prompt, category, className }: PromptCardProps) {
     >
       <div className="relative aspect-[16/9] overflow-hidden bg-muted">
         {prompt.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
+           
           <img
             src={prompt.imageUrl}
             alt={prompt.imageAlt || prompt.title}
