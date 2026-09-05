@@ -1,0 +1,172 @@
+// Prompt Hoster — Database is the source of truth.
+// Prisma/SQLite acts as the persistence layer behind the `lib/onyxbase` service abstraction.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Prompt {
+  id             String   @id
+  slug           String   @unique
+  title          String
+  description    String
+  prompt         String
+  imageId        String?
+  imageUrl       String?
+  imageAlt       String?
+  categoryId     String
+  category       Category @relation(fields: [categoryId], references: [id])
+  authorName     String
+  tags           String   @default("") // comma-separated (SQLite limitation)
+  featured       Boolean  @default(false)
+  published      Boolean  @default(true)
+  seoTitle       String?
+  seoDescription String?
+  views          Int      @default(0)
+  copies         Int      @default(0)
+  likes          Int      @default(0)
+  saves          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  comments  Comment[]
+  likesRel  PromptLike[]
+  savesRel  PromptSave[]
+  viewsRel  PromptView[]
+}
+
+model Category {
+  id          String   @id
+  name        String
+  slug        String   @unique
+  description String?
+  imageId     String?
+  imageUrl    String?
+  featured    Boolean  @default(false)
+  promptCount Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  prompts Prompt[]
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  promptId   String
+  prompt     Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  parentId   String?
+  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Comment[] @relation("CommentReplies")
+  authorId   String
+  authorName String
+  content    String
+  likes      Int      @default(0)
+  status     String   @default("published") // pending | published | hidden | deleted | reported
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  likesRel CommentLike[]
+  reports  Report[]
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  visitorId String
+  createdAt DateTime @default(now())
+
+  @@unique([commentId, visitorId])
+}
+
+model PromptLike {
+  id        String   @id @default(cuid())
+  promptId  String
+  prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  visitorId String
+  createdAt DateTime @default(now())
+
+  @@unique([promptId, visitorId])
+}
+
+model PromptSave {
+  id        String   @id @default(cuid())
+  promptId  String
+  prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  visitorId String
+  createdAt DateTime @default(now())
+
+  @@unique([promptId, visitorId])
+}
+
+model PromptView {
+  id        String   @id @default(cuid())
+  promptId  String
+  prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  visitorId String
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  commentId  String?
+  comment    Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reason     String
+  reporterId String
+  status     String   @default("pending") // pending | reviewed | dismissed | actioned
+  createdAt  DateTime @default(now())
+}
+
+model Visitor {
+  id       String    @id
+  name     String?
+  createdAt DateTime @default(now())
+  lastSeen  DateTime @updatedAt
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  type      String // prompt_view | prompt_copy | prompt_like | prompt_save | search | category_view | comment_created | share
+  promptId  String?
+  visitorId String?
+  metadata  String? // JSON string
+  createdAt DateTime @default(now())
+}
+
+model SiteConfig {
+  id                  String  @id @default("default")
+  siteName            String  @default("PromptVault")
+  siteDescription     String  @default("Discover high-quality AI prompts that actually work.")
+  logo                String?
+  favicon             String?
+  maintenanceMode     Boolean @default(false)
+  commentsEnabled     Boolean @default(true)
+  adsEnabled          Boolean @default(true)
+  homepageTitle       String  @default("Discover prompts that actually work.")
+  homepageDescription String  @default("Browse, copy, and share premium AI prompts for art, writing, coding, marketing and more.")
+  featuredPromptIds   String  @default("[]") // JSON array of prompt ids
+  adPlacements        String  @default("{\"homepageFeed\":true,\"promptInline\":true,\"sidebar\":false,\"header\":true,\"footer\":true,\"searchResults\":true}")
+  adminPassword       String  @default("admin123")
+}
+
+model ImageAsset {
+  id        String   @id @default(cuid())
+  filename  String
+  url       String
+  alt       String?
+  createdAt DateTime @default(now())
+}
+
+model SearchTerm {
+  id        String   @id @default(cuid())
+  term      String
+  count     Int      @default(1)
+  lastUsed  DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([term])
+}
