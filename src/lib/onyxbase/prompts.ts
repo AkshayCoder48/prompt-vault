@@ -77,14 +77,20 @@ function normalize(rec: { key: string; value: any; updatedAt?: string }): Prompt
 }
 
 export const promptService = {
-  async getById(id: string): Promise<Prompt | null> {
+  /** Find the raw record + the key it's stored under (tries all prefixes). */
+  async _findRaw(id: string): Promise<{ key: string; value: any; updatedAt?: string } | null> {
     const ob = getOnyxBase();
-    // try both key prefixes (prompt: and prompts:) then bare id
-    for (const k of [key(id), `prompts:${id}`, id]) {
+    for (const k of [`prompts:${id}`, key(id), id]) {
       const rec = await ob.get<any>(COLLECTIONS.prompts, k);
-      if (rec) return normalize({ key: k, value: rec.value, updatedAt: rec.updatedAt });
+      if (rec) return { key: k, value: rec.value, updatedAt: rec.updatedAt };
     }
     return null;
+  },
+
+  async getById(id: string): Promise<Prompt | null> {
+    const raw = await this._findRaw(id);
+    if (!raw) return null;
+    return normalize(raw);
   },
 
   async getBySlug(slug: string): Promise<Prompt | null> {
@@ -99,11 +105,20 @@ export const promptService = {
     return all.find((p) => (p.subdomain || "").toLowerCase() === sd) || null;
   },
 
-  /** Fetch the whole collection (single GraphQL round-trip). */
+  /** Fetch the whole collection (single GraphQL round-trip). Dedupes by id
+   *  in case the same prompt exists under both `prompt:` and `prompts:` keys. */
   async listAll(): Promise<Prompt[]> {
     const ob = getOnyxBase();
     const recs = await ob.listCollection<Partial<Prompt>>(COLLECTIONS.prompts, 500);
-    return recs.map(normalize);
+    const seen = new Map<string, Prompt>();
+    for (const r of recs) {
+      const p = normalize(r);
+      // prefer the `prompts:`-prefixed record when both exist
+      if (!seen.has(p.id) || r.key.startsWith("prompts:")) {
+        seen.set(p.id, p);
+      }
+    }
+    return [...seen.values()];
   },
 
   async listPublished(): Promise<Prompt[]> {
@@ -242,20 +257,26 @@ export const promptService = {
   },
 
   async update(id: string, patch: Partial<Prompt>): Promise<Prompt | null> {
-    const existing = await this.getById(id);
-    if (!existing) return null;
+    const raw = await this._findRaw(id);
+    if (!raw) return null;
+    const existing = normalize(raw);
     const updated: Prompt = {
       ...existing,
       ...patch,
       id: existing.id,
       updatedAt: new Date().toISOString(),
     };
-    await getOnyxBase().set(COLLECTIONS.prompts, key(id), updated);
+    // Write back to the SAME key the record was found under (prevents duplicates).
+    await getOnyxBase().set(COLLECTIONS.prompts, raw.key, updated);
     return updated;
   },
 
   async remove(id: string): Promise<void> {
-    await getOnyxBase().del(COLLECTIONS.prompts, key(id));
+    const ob = getOnyxBase();
+    // delete all possible key variants to avoid orphan duplicates
+    for (const k of [`prompts:${id}`, key(id), id]) {
+      try { await ob.del(COLLECTIONS.prompts, k); } catch { /* ignore */ }
+    }
   },
 
   // ─── Counters ──────────────────────────────────────────
