@@ -17,7 +17,6 @@ import ZAI from "z-ai-web-dev-sdk";
 let _zai: any = null;
 async function getLLM() {
   if (!_zai) {
-    // Prefer ZAI_CONFIG env var (works on Vercel serverless).
     const envCfg = process.env.ZAI_CONFIG;
     if (envCfg) {
       try {
@@ -25,11 +24,12 @@ async function getLLM() {
         // Bypass ZAI.create() (which reads files) — instantiate directly.
         _zai = new (ZAI as any)(config);
       } catch (e) {
-        throw new Error("Invalid ZAI_CONFIG env var: " + (e as any).message);
+        throw new Error(`Invalid ZAI_CONFIG (len=${envCfg.length}): ${(e as any).message}`);
       }
     } else {
-      // Local dev: use the SDK's file-based config loader.
-      _zai = await ZAI.create();
+      // No env var — try the SDK's file-based loader (works locally with /etc/.z-ai-config).
+      try { _zai = await ZAI.create(); }
+      catch (e) { throw new Error(`ZAI config not found in env (ZAI_CONFIG unset) or files: ${(e as any).message}`); }
     }
   }
   return _zai;
