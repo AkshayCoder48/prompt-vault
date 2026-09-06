@@ -327,7 +327,7 @@ function PromptDialog({ prompt, categories, onClose, onSaved }: {
   } : {
     title: "", slug: "", description: "", prompt: "", imageUrl: "", imageAlt: "",
     categoryId: categories[0]?.id || "", authorName: "Admin", tags: "",
-    featured: false, published: true, seoTitle: "", seoDescription: "",
+    featured: false, published: true, seoTitle: "", seoDescription: "", subdomain: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -379,6 +379,7 @@ function PromptDialog({ prompt, categories, onClose, onSaved }: {
             <Field label="SEO title"><Input value={form.seoTitle} onChange={(e) => setForm({ ...form, seoTitle: e.target.value })} /></Field>
             <Field label="SEO description"><Input value={form.seoDescription} onChange={(e) => setForm({ ...form, seoDescription: e.target.value })} /></Field>
           </div>
+          <Field label="Subdomain slug (optional — e.g. 'myart' → myart.yourdomain.com)"><Input value={form.subdomain || ""} onChange={(e) => setForm({ ...form, subdomain: e.target.value })} placeholder="myart" /></Field>
           <div className="flex gap-6">
             <label className="flex items-center gap-2 text-sm"><Switch checked={form.featured} onCheckedChange={(v) => setForm({ ...form, featured: v })} /> Featured</label>
             <label className="flex items-center gap-2 text-sm"><Switch checked={form.published} onCheckedChange={(v) => setForm({ ...form, published: v })} /> Published</label>
@@ -538,6 +539,7 @@ function CommentsTab() {
 // ─── Ingest tab (MeiGen) ────────────────────────────────────
 function IngestTab({ onIngested }: { onIngested: () => void }) {
   const [meigenId, setMeigenId] = useState("");
+  const [ingestSubdomain, setIngestSubdomain] = useState("");
   const [query, setQuery] = useState("Male");
   const [limit, setLimit] = useState("10");
   const [busy, setBusy] = useState(false);
@@ -548,9 +550,9 @@ function IngestTab({ onIngested }: { onIngested: () => void }) {
     setBusy(true);
     setLog((l) => [`→ Ingesting ${meigenId}…`, ...l]);
     try {
-      const r = await adminApi<any>("/api/admin/ingest", { method: "POST", body: JSON.stringify({ meigenId: meigenId.trim() }) });
+      const r = await adminApi<any>("/api/admin/ingest", { method: "POST", body: JSON.stringify({ meigenId: meigenId.trim(), subdomain: ingestSubdomain.trim() || undefined }) });
       if (r.ok && r.duplicate) { setLog((l) => [`✓ Duplicate — already ingested: ${r.record?.id}`, ...l]); toast.info("Already ingested (duplicate)"); }
-      else if (r.ok) { setLog((l) => [`✓ Ingested: ${r.record.title} → ${r.record.websiteUrl}`, ...l]); toast.success("Ingested"); setMeigenId(""); }
+      else if (r.ok) { setLog((l) => [`✓ Ingested: ${r.record.title} → ${r.record.websiteUrl}${r.record.subdomain ? ` (subdomain: ${r.record.subdomain})` : ""}`, ...l]); toast.success("Ingested"); setMeigenId(""); }
       else { setLog((l) => [`✗ Failed at ${r.failedStage}: ${r.error}`, ...l]); toast.error(`Failed: ${r.error}`); }
     } catch (err: any) { setLog((l) => [`✗ ${err.message}`, ...l]); toast.error(err.message); }
     finally { setBusy(false); }
@@ -578,6 +580,9 @@ function IngestTab({ onIngested }: { onIngested: () => void }) {
           <div className="flex gap-2">
             <Input value={meigenId} onChange={(e) => setMeigenId(e.target.value)} placeholder="e.g. 2009629483448627597" />
             <Button onClick={ingestOne} disabled={busy} className="gap-1.5">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <DownloadCloud className="h-4 w-4" />} Ingest</Button>
+          </div>
+          <div className="mt-2">
+            <Input value={ingestSubdomain} onChange={(e) => setIngestSubdomain(e.target.value)} placeholder="Subdomain slug (optional — e.g. myart)" className="h-9" />
           </div>
         </Card>
         <Card className="p-4">

@@ -19,6 +19,8 @@ export interface Prompt {
   copies: number;
   likes: number;
   saves: number;
+  /** Optional subdomain slug mapped to this prompt (e.g. "myart" → myart.domain.com). */
+  subdomain?: string | null;
   createdAt: string;
   updatedAt: string;
 }

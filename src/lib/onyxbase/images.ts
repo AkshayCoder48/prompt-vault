@@ -25,7 +25,7 @@ export interface ImageRecord {
   prompt: string;              // original prompt/text
 
   source: {
-    provider: "meigen";
+    provider: "meigen" | "manual" | "upload";
     imageId: string;
     sourceUrl: string;         // first media_urls entry
     originalPrompt: string;
@@ -47,6 +47,9 @@ export interface ImageRecord {
   status: ImageStatus;
   failedStage?: string;
   error?: string;
+
+  /** Optional subdomain slug mapped to this image (e.g. "myart" → myart.domain.com). */
+  subdomain?: string | null;
 
   createdAt: string;
   updatedAt: string;
@@ -79,6 +82,13 @@ export const imageService = {
   async findByMeigenId(meigenId: string): Promise<ImageRecord | null> {
     const all = await this.list(500);
     return all.find((r) => r.source?.provider === "meigen" && r.source?.imageId === meigenId) || null;
+  },
+
+  /** Look up an image record by its subdomain slug. */
+  async findBySubdomain(subdomain: string): Promise<ImageRecord | null> {
+    const all = await this.list(500);
+    const sd = subdomain.toLowerCase().trim();
+    return all.find((r) => (r.subdomain || "").toLowerCase() === sd) || null;
   },
 
   async create(record: ImageRecord): Promise<void> {

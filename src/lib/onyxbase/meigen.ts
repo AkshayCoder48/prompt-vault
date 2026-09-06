@@ -143,7 +143,10 @@ function slugify(s: string): string {
  * Ingest a single existing MeiGen gallery image into Onyx Base.
  * Does NOT generate any image. Stages are independently retriable.
  */
-export async function ingestMeigenImage(meigenId: string): Promise<IngestResult> {
+export async function ingestMeigenImage(
+  meigenId: string,
+  options: { subdomain?: string } = {}
+): Promise<IngestResult> {
   // ── 1. meigen_fetch ─────────────────────────────────────────
   let meigen: MeigenImage;
   try {
@@ -228,6 +231,7 @@ export async function ingestMeigenImage(meigenId: string): Promise<IngestResult>
     },
     pinterest: { status: "skipped", postId: null, pinUrl: null, publishedAt: null },
     status: "stored",
+    subdomain: options.subdomain || null,
     createdAt: now,
     updatedAt: now,
   };

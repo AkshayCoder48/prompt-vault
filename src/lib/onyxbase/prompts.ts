@@ -34,6 +34,7 @@ function normalize(rec: { key: string; value: Partial<Prompt>; updatedAt?: strin
     copies: Number(v.copies) || 0,
     likes: Number(v.likes) || 0,
     saves: Number(v.saves) || 0,
+    subdomain: v.subdomain ?? null,
     createdAt: v.createdAt || rec.updatedAt || new Date().toISOString(),
     updatedAt: v.updatedAt || rec.updatedAt || new Date().toISOString(),
   };
@@ -50,6 +51,13 @@ export const promptService = {
   async getBySlug(slug: string): Promise<Prompt | null> {
     const all = await this.listAll();
     return all.find((p) => p.slug === slug) || null;
+  },
+
+  /** Look up a published prompt by its subdomain slug. */
+  async getBySubdomain(subdomain: string): Promise<Prompt | null> {
+    const all = await this.listPublished();
+    const sd = subdomain.toLowerCase().trim();
+    return all.find((p) => (p.subdomain || "").toLowerCase() === sd) || null;
   },
 
   /** Fetch the whole collection (single GraphQL round-trip). */

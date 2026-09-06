@@ -16,7 +16,8 @@ export async function POST(req: NextRequest) {
     if (!meigenId) {
       return NextResponse.json({ ok: false, error: "meigenId is required." }, { status: 400 });
     }
-    const result = await ingestMeigenImage(meigenId);
+    const subdomain = body.subdomain ? String(body.subdomain).trim().toLowerCase() : undefined;
+    const result = await ingestMeigenImage(meigenId, { subdomain });
     return NextResponse.json(result);
   } catch (err: any) {
     const status = err instanceof OnyxBaseError ? err.status || 503 : 500;

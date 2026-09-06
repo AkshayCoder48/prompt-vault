@@ -19,6 +19,7 @@ import type { SiteConfig } from "@/lib/onyxbase/types";
 
 export default function Page() {
   const route = useAppStore((s) => s.route);
+  const navigate = useAppStore((s) => s.navigate);
   const [config, setConfig] = useState<SiteConfig | null>(null);
 
   useEffect(() => {
@@ -26,6 +27,24 @@ export default function Page() {
       .then((r) => setConfig(r.config))
       .catch(() => {});
   }, [route.name === "home" ? 0 : 1]); // refresh config when navigating home
+
+  // Subdomain resolution: on first load, ask the server which record (if any)
+  // maps to the current host's subdomain. If found, auto-navigate to it.
+  useEffect(() => {
+    // skip if the user is already on a specific content route
+    if (window.location.hash && window.location.hash !== "#/" && window.location.hash !== "#") return;
+    api<{ ok: boolean; type: "prompt" | "image" | null; record?: any }>("/api/resolve-host")
+      .then((r) => {
+        if (r.ok && r.type === "prompt" && r.record?.slug) {
+          navigate({ name: "prompt", id: r.record.slug });
+        } else if (r.ok && r.type === "image" && r.record?.id) {
+          navigate({ name: "image", id: r.record.id });
+        }
+      })
+      .catch(() => {});
+    // run once on mount
+     
+  }, []);
 
   // maintenance gate (admin route always accessible)
   if (config?.maintenanceMode && route.name !== "admin") {

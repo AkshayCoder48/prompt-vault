@@ -13,7 +13,9 @@ import {
 } from "./index";
 import type { Prompt } from "./types";
 
-const img = (slug: string) => `/seed-img/${slug}.png`;
+// Images are NOT bundled. Set imageUrl in Onyx Base to your own hosted image URL
+// (e.g. an Onyx Base file URL https://onyxbase-phi.vercel.app/f/<fileId>, or any CDN URL).
+const img = (_slug: string) => null;
 
 const categories = [
   { id: "cat_ai_art", name: "AI Art", slug: "ai-art", description: "Generative art & image prompts", featured: true, imageUrl: null },
