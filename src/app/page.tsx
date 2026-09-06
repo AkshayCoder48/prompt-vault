@@ -145,8 +145,11 @@ function AdminGate() {
   const [state, setState] = useState<"checking" | "granted" | "denied" | "unconfigured">("checking");
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const k = params.get("k") || "";
+    // The query lives in the hash fragment (e.g. #/admin?k=secret) because we
+    // use hash-based routing, so window.location.search is empty. Parse from hash.
+    const hash = window.location.hash.replace(/^#\/?/, "");
+    const qIndex = hash.indexOf("?");
+    const k = qIndex >= 0 ? new URLSearchParams(hash.slice(qIndex + 1)).get("k") || "" : "";
     api<{ ok: boolean; access: boolean; configured: boolean }>(`/api/admin/access?k=${encodeURIComponent(k)}`)
       .then((r) => {
         if (!r.configured) setState("unconfigured");
