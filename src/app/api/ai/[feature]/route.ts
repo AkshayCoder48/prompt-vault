@@ -61,7 +61,7 @@ export async function POST(
     return NextResponse.json({ ok: true, feature, result });
   } catch (err: any) {
     return NextResponse.json(
-      { ok: false, error: err.message || "AI request failed.", retryable: true, hasZaiConfig: !!process.env.ZAI_CONFIG },
+      { ok: false, error: err.message || "AI request failed.", retryable: true },
       { status: 502 }
     );
   }
