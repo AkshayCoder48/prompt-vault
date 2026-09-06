@@ -41,7 +41,6 @@ export function Footer({ siteName = "PromptVault" }: { siteName?: string }) {
           <h4 className="text-sm font-semibold">About</h4>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li><button className="hover:text-foreground" onClick={() => navigate({ name: "about" })}>About PromptVault</button></li>
-            <li><button className="hover:text-foreground" onClick={() => navigate({ name: "admin" })}>Admin Dashboard</button></li>
           </ul>
         </div>
       </div>

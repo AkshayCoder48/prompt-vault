@@ -37,17 +37,17 @@ export function PromptCard({ prompt, category, className }: PromptCardProps) {
       )}
       onClick={() => navigate({ name: "prompt", id: prompt.slug })}
     >
-      <div className="relative aspect-[16/9] overflow-hidden bg-muted">
+      <div className="relative overflow-hidden bg-muted">
         {prompt.imageUrl ? (
            
           <img
             src={proxiedImage(prompt.imageUrl) || undefined}
             alt={prompt.imageAlt || prompt.title}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-auto w-full max-h-[520px] object-contain"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+          <div className="flex aspect-[16/9] h-full w-full items-center justify-center text-muted-foreground">
             <span className="text-4xl font-bold opacity-20">{prompt.title.charAt(0)}</span>
           </div>
         )}

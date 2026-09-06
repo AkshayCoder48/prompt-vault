@@ -84,7 +84,8 @@ export interface SiteConfig {
     footer: boolean;
     searchResults: boolean;
   };
-  adminPassword: string;
+  adminPassword: string;       // empty = admin login disabled (set in Onyx Base)
+  adminAccessKey: string | null; // secret URL key to reach the admin panel (set in Onyx Base)
 }
 
 export type AnalyticsEventType =

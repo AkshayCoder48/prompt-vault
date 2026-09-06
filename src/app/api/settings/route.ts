@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const config = await settingsService.get();
-    // never expose the admin password to the browser
-    const { adminPassword, ...safe } = config as any;
+    // never expose secrets to the browser
+    const { adminPassword, adminAccessKey, ...safe } = config as any;
     return NextResponse.json({ ok: true, config: safe });
   } catch (err: any) {
     const status = err instanceof OnyxBaseError ? err.status || 503 : 500;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Menu, X, Sparkles, Bookmark, Flame, Clock, LayoutGrid, Info, Shield } from "lucide-react";
+import { Search, Menu, X, Sparkles, Bookmark, Flame, Clock, LayoutGrid, Info } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,18 +124,6 @@ export function Header({ siteName = "PromptVault" }: { siteName?: string }) {
                   {item.label}
                 </Button>
               ))}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  navigate({ name: "admin" });
-                  setOpen(false);
-                }}
-                className="justify-start gap-2"
-              >
-                <Shield className="h-4 w-4" />
-                Admin
-              </Button>
             </div>
           </div>
         </div>

@@ -12,7 +12,7 @@ import { CategoryListView } from "@/components/views/CategoryListView";
 import { SavedView } from "@/components/views/SavedView";
 import { AboutView } from "@/components/views/AboutView";
 import { AdminView } from "@/components/views/AdminView";
-import { Wrench } from "lucide-react";
+import { Wrench, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SiteConfig } from "@/lib/onyxbase/types";
 
@@ -124,7 +124,7 @@ function renderRoute(route: ReturnType<typeof useAppStore.getState>["route"]) {
     case "about":
       return <AboutView />;
     case "admin":
-      return <AdminView />;
+      return <AdminGate />;
     default:
       return <HomeView />;
   }
@@ -132,4 +132,66 @@ function renderRoute(route: ReturnType<typeof useAppStore.getState>["route"]) {
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * Gate for the admin route. The admin panel is hidden from the public — no
+ * links to it exist in the UI. It's only reachable at `#/admin?k=<accessKey>`,
+ * where `<accessKey>` is a secret stored in the Onyx Base `site:config` record
+ * (`adminAccessKey`). Without the correct key, visitors see a normal 404.
+ */
+function AdminGate() {
+  const navigate = useAppStore((s) => s.navigate);
+  const [state, setState] = useState<"checking" | "granted" | "denied" | "unconfigured">("checking");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const k = params.get("k") || "";
+    api<{ ok: boolean; access: boolean; configured: boolean }>(`/api/admin/access?k=${encodeURIComponent(k)}`)
+      .then((r) => {
+        if (!r.configured) setState("unconfigured");
+        else if (r.access) setState("granted");
+        else setState("denied");
+      })
+      .catch(() => setState("denied"));
+  }, []);
+
+  if (state === "checking") {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Lock className="h-5 w-5 animate-pulse text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (state === "granted") return <AdminView />;
+
+  if (state === "unconfigured") {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center px-4 text-center">
+        <Lock className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+        <h1 className="text-xl font-bold">Admin not configured</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Set an <code className="rounded bg-muted px-1">adminAccessKey</code> and{" "}
+          <code className="rounded bg-muted px-1">adminPassword</code> in your Onyx Base
+          {" "}<code className="rounded bg-muted px-1">site:config</code> record, then visit
+          {" "}<code className="rounded bg-muted px-1">/#/admin?k=&lt;yourAccessKey&gt;</code>.
+        </p>
+        <Button variant="outline" className="mt-4" onClick={() => navigate({ name: "home" })}>
+          Back home
+        </Button>
+      </div>
+    );
+  }
+
+  // denied — looks like a normal 404 so the admin panel's existence isn't leaked
+  return (
+    <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center px-4 text-center">
+      <h1 className="text-2xl font-bold">404</h1>
+      <p className="mt-2 text-sm text-muted-foreground">This page could not be found.</p>
+      <Button variant="outline" className="mt-4" onClick={() => navigate({ name: "home" })}>
+        Back home
+      </Button>
+    </div>
+  );
 }

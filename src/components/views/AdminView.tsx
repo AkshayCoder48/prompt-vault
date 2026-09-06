@@ -145,7 +145,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
             <ShieldCheck className="h-6 w-6" />
           </span>
           <h1 className="mt-3 text-xl font-bold">Admin login</h1>
-          <p className="text-sm text-muted-foreground">Default password: <code className="rounded bg-muted px-1">admin123</code></p>
+          <p className="text-sm text-muted-foreground">Enter your admin password (set in Onyx Base).</p>
         </div>
         <form onSubmit={submit} className="space-y-3">
           <Input
@@ -640,9 +640,9 @@ function ImagesTab() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((p) => (
             <Card key={p.id} className="overflow-hidden p-0">
-              <div className="aspect-[16/9] bg-muted">
+              <div className="bg-muted">
                 { }
-                <img src={proxiedImage(p.imageUrl) || ""} alt={p.title} className="h-full w-full object-cover" />
+                <img src={proxiedImage(p.imageUrl) || ""} alt={p.title} className="h-auto w-full max-h-[420px] object-contain" />
               </div>
               <div className="p-3">
                 <h4 className="line-clamp-1 text-sm font-semibold">{p.title}</h4>
@@ -700,7 +700,8 @@ function SettingsTab() {
         <h3 className="mb-3 text-sm font-semibold">Site</h3>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Site name"><Input value={config.siteName} onChange={(e) => setConfig({ ...config, siteName: e.target.value })} /></Field>
-          <Field label="Admin password"><Input value={config.adminPassword} onChange={(e) => setConfig({ ...config, adminPassword: e.target.value })} /></Field>
+          <Field label="Admin password (empty = login disabled)"><Input value={config.adminPassword} onChange={(e) => setConfig({ ...config, adminPassword: e.target.value })} /></Field>
+          <Field label="Admin access key (secret URL key — visit /#/admin?k=<this>)"><Input value={config.adminAccessKey || ""} onChange={(e) => setConfig({ ...config, adminAccessKey: e.target.value })} /></Field>
           <Field label="Site description"><Input value={config.siteDescription} onChange={(e) => setConfig({ ...config, siteDescription: e.target.value })} /></Field>
           <Field label="Logo URL"><Input value={config.logo || ""} onChange={(e) => setConfig({ ...config, logo: e.target.value })} /></Field>
         </div>

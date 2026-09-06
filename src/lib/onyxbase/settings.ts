@@ -23,7 +23,8 @@ const DEFAULT_CONFIG: SiteConfig = {
     footer: true,
     searchResults: true,
   },
-  adminPassword: "admin123",
+  adminPassword: "",          // empty = admin login disabled. Set in Onyx Base.
+  adminAccessKey: null,       // secret URL key to reach the admin panel. Set in Onyx Base.
 };
 
 export const settingsService = {

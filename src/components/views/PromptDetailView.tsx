@@ -228,15 +228,13 @@ export function PromptDetailView({ slug }: { slug: string }) {
 
       {/* Image */}
       {prompt.imageUrl && (
-        <div className="mt-6 overflow-hidden rounded-xl border border-border">
-          <div className="aspect-[16/9] bg-muted">
-            { }
-            <img
-              src={proxiedImage(prompt.imageUrl) || undefined}
-              alt={prompt.imageAlt || prompt.title}
-              className="h-full w-full object-cover"
-            />
-          </div>
+        <div className="mt-6 overflow-hidden rounded-xl border border-border bg-muted">
+          { }
+          <img
+            src={proxiedImage(prompt.imageUrl) || undefined}
+            alt={prompt.imageAlt || prompt.title}
+            className="mx-auto h-auto w-full max-h-[80vh] object-contain"
+          />
         </div>
       )}
 

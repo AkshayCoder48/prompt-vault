@@ -9,6 +9,13 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const config = await settingsService.get();
+    // If no password is configured, admin login is disabled entirely.
+    if (!config.adminPassword) {
+      return NextResponse.json(
+        { ok: false, error: "Admin login is not configured. Set adminPassword in Onyx Base." },
+        { status: 403 }
+      );
+    }
     if (body.password !== config.adminPassword) {
       return NextResponse.json({ ok: false, error: "Invalid password." }, { status: 401 });
     }
