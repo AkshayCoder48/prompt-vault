@@ -1,4 +1,6 @@
 import ZAI from "z-ai-web-dev-sdk";
+import * as fs from "fs";
+import * as path from "path";
 
 /**
  * AI PromptLab — text-only AI layer.
@@ -7,16 +9,24 @@ import ZAI from "z-ai-web-dev-sdk";
  * returns a typed object. The frontend NEVER consumes free-form AI output — it
  * only ever renders these structured results.
  *
- * Used by:
- *  - /api/ai/* routes (thin wrappers that call these functions)
- *  - the PromptLab UI (#/lab)
- *  - inline buttons on prompt cards/detail
+ * The z-ai-web-dev-sdk reads its config from a .z-ai-config file. On Vercel
+ * (serverless) there's no persistent filesystem, so we bootstrap the config
+ * from the ZAI_CONFIG env var (set as a Vercel secret) at module load.
  */
 
 // ─── core helper ────────────────────────────────────────────
 let _zai: any = null;
 async function getLLM() {
-  if (!_zai) _zai = await ZAI.create();
+  if (!_zai) {
+    // On serverless (Vercel), write the config from env to a temp file the SDK can read.
+    const envCfg = process.env.ZAI_CONFIG;
+    if (envCfg) {
+      const tmpDir = process.env.TMPDIR || "/tmp";
+      const cfgPath = path.join(tmpDir, ".z-ai-config");
+      try { fs.writeFileSync(cfgPath, envCfg); } catch { /* ignore */ }
+    }
+    _zai = await ZAI.create();
+  }
   return _zai;
 }
 
