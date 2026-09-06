@@ -1,6 +1,4 @@
 import ZAI from "z-ai-web-dev-sdk";
-import * as fs from "fs";
-import * as path from "path";
 
 /**
  * AI PromptLab — text-only AI layer.
@@ -9,30 +7,30 @@ import * as path from "path";
  * returns a typed object. The frontend NEVER consumes free-form AI output — it
  * only ever renders these structured results.
  *
- * The z-ai-web-dev-sdk reads its config from a .z-ai-config file. On Vercel
- * (serverless) there's no persistent filesystem, so we bootstrap the config
- * from the ZAI_CONFIG env var (set as a Vercel secret) at module load.
+ * The z-ai-web-dev-sdk normally reads config from a .z-ai-config file, but on
+ * Vercel serverless the filesystem paths it checks (cwd, os.homedir(), /etc)
+ * are read-only. So we instantiate the ZAI client directly from the ZAI_CONFIG
+ * env var (a JSON string), bypassing file-based config loading entirely.
  */
 
 // ─── core helper ────────────────────────────────────────────
 let _zai: any = null;
 async function getLLM() {
   if (!_zai) {
-    // On serverless (Vercel), write the config from env to a file the SDK can read.
-    // The SDK checks process.cwd(), $HOME, and /etc — only $HOME is reliably writable.
+    // Prefer ZAI_CONFIG env var (works on Vercel serverless).
     const envCfg = process.env.ZAI_CONFIG;
     if (envCfg) {
-      const home = process.env.HOME || process.env.HOMEPATH || "/tmp";
-      const candidates = [
-        path.join(home, ".z-ai-config"),
-        path.join(process.cwd(), ".z-ai-config"),
-        "/tmp/.z-ai-config",
-      ];
-      for (const cfgPath of candidates) {
-        try { fs.writeFileSync(cfgPath, envCfg); break; } catch { /* try next */ }
+      try {
+        const config = JSON.parse(envCfg);
+        // Bypass ZAI.create() (which reads files) — instantiate directly.
+        _zai = new (ZAI as any)(config);
+      } catch (e) {
+        throw new Error("Invalid ZAI_CONFIG env var: " + (e as any).message);
       }
+    } else {
+      // Local dev: use the SDK's file-based config loader.
+      _zai = await ZAI.create();
     }
-    _zai = await ZAI.create();
   }
   return _zai;
 }
