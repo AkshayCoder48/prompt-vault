@@ -104,3 +104,33 @@ Stage Summary:
 - All external images now route through /api/img proxy → no more broken/CORS-blocked images.
 - Works for images.meigen.ai AND any future hotlink-protected host.
 - GitHub + Vercel in sync (commit bfbcb3c).
+
+---
+Task ID: H (full-size images + remove default password + hide admin)
+Agent: orchestrator
+Task: Use full image size, remove default admin password, hide admin behind Onyx Base access key
+
+Work Log:
+- Images: object-cover → object-contain with natural aspect ratio (no cropping). PromptCard max-h-520px, PromptDetailView hero max-h-80vh, Admin ImagesTab max-h-420px. Verified: firstImgNatural=1792 (full MeiGen portrait height renders).
+- Removed default "admin123" password; settingsService default adminPassword="" (empty = login disabled). Admin login route returns 403 "not configured" when empty.
+- Added adminAccessKey field to SiteConfig (secret URL key, stored in Onyx Base site:config record).
+- Added /api/admin/access route: verifies ?k=<key> against config.adminAccessKey without exposing the key.
+- Public /api/settings now strips both adminPassword AND adminAccessKey from the response.
+- Added AdminGate component in page.tsx: #/admin only renders AdminView if ?k=<correct key>; otherwise shows 404 (doesn't leak admin panel exists). Shows "not configured" help if no adminAccessKey set.
+- Fixed hash-fragment query parsing (?k= lives in the hash, not window.location.search).
+- Removed all public admin links: Footer "Admin Dashboard" link + Header mobile nav admin button.
+- Admin Settings tab now has fields for both adminPassword (empty=disabled) and adminAccessKey.
+- Set adminAccessKey="pv-secret-2024" + adminPassword="change-me-now" in Onyx Base (user should change these).
+- Onyx Base multi-instance consistency: needed to write config 3x to propagate adminAccessKey across instances.
+- Verified on production:
+  - Settings no longer exposes adminPassword/adminAccessKey
+  - /api/admin/access?k=wrong → access:false; ?k=pv-secret-2024 → access:true
+  - #/admin (no key) → 404 page
+  - #/admin?k=pv-secret-2024 → Admin login form
+  - Login with password → Admin Dashboard (7 tabs)
+
+Stage Summary:
+- Images render full-size (no crop).
+- No default admin password — must be set in Onyx Base.
+- Admin panel hidden from public — only reachable at /#/admin?k=<accessKey> where accessKey is stored in Onyx Base.
+- GitHub + Vercel in sync (commit a2f1c3b).
