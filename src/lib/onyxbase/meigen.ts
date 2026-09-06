@@ -1,12 +1,9 @@
-import { getOnyxBase } from "./client";
-import { imageService, type ImageRecord } from "./images";
+import { getOnyxBase, COLLECTIONS } from "./client";
+import { promptService } from "./prompts";
+import type { Prompt } from "./types";
 import { generateImageMetadata } from "./llm";
 
 const MEIGEN_BASE = process.env.MEIGEN_BASE_URL || "https://www.meigen.ai";
-
-/** Public website URL prefix — single configurable template. */
-const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
-const IMAGE_URL_PREFIX = process.env.PUBLIC_IMAGE_URL_PREFIX || `${PUBLIC_BASE_URL}/#/image/`;
 
 export interface MeigenImage {
   id: string;
@@ -31,7 +28,7 @@ export type IngestStage =
 
 export interface IngestResult {
   ok: boolean;
-  record?: ImageRecord;
+  record?: Prompt;
   duplicate?: boolean;
   failedStage?: IngestStage;
   error?: string;
@@ -125,10 +122,6 @@ async function uploadToOnyxBase(file: DownloadedFile, label: string): Promise<{ 
   return { fileId, downloadUrl };
 }
 
-function makeId(): string {
-  return `img_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-}
-
 function slugify(s: string): string {
   return s
     .toLowerCase()
@@ -157,9 +150,12 @@ export async function ingestMeigenImage(
     return { ok: false, failedStage: "meigen_fetch", error: err.message };
   }
 
-  // ── 2. duplicate_check ──────────────────────────────────────
+  // ── 2. duplicate_check (by sourceId in prompts collection) ──
   try {
-    const existing = await imageService.findByMeigenId(meigenId);
+    const all = await promptService.listAll();
+    const existing = all.find(
+      (p) => p.sourceId === meigenId || p.id === meigenId
+    );
     if (existing) return { ok: true, duplicate: true, record: existing };
   } catch (err: any) {
     return { ok: false, failedStage: "duplicate_check", error: err.message };
@@ -201,43 +197,42 @@ export async function ingestMeigenImage(
     return { ok: false, failedStage: "metadata_generation", error: err.message };
   }
 
-  // ── 6. record_creation ──────────────────────────────────────
-  const id = makeId();
+  // ── 6. record_creation (writes to the prompts collection) ──
+  // Uses the flat schema so records are consistent with directly-authored ones.
+  const id = meigen.id; // use the MeiGen id as the record id (key: prompts:<meigenId>)
   const now = new Date().toISOString();
-  const record: ImageRecord = {
+  const record: Prompt = {
     id,
-    slug: slugify(meta.title),
-    imageUrl: downloadUrl,
-    imageFileId: fileId,
-    websiteUrl: `${IMAGE_URL_PREFIX}${id}`,
+    slug: slugify(meta.title) || id,
     title: meta.title,
     description: meta.description,
-    hook: meta.hook,
-    altText: meta.alt_text,
-    tags: meta.tags,
-    category: meta.category,
     prompt: meigen.text || "",
-    source: {
-      provider: "meigen",
-      imageId: meigen.id,
-      sourceUrl,
-      originalPrompt: meigen.text || "",
-      authorUsername: meigen.author_username,
-      authorDisplayName: meigen.author_display_name,
-      model: meigen.model,
-      imageWidth: meigen.image_width,
-      imageHeight: meigen.image_height,
-      createdAt: meigen.created_at,
-    },
-    pinterest: { status: "skipped", postId: null, pinUrl: null, publishedAt: null },
-    status: "stored",
+    imageUrl: downloadUrl,
+    imageAlt: meta.alt_text || null,
+    categoryId: null, // Uncategorized by default; admin can set later
+    authorName: meigen.author_display_name || meigen.author_username || "Anonymous",
+    tags: meta.tags,
+    featured: false,
+    published: true,
+    seoTitle: null,
+    seoDescription: null,
+    views: 0,
+    copies: 0,
+    likes: 0,
+    saves: 0,
     subdomain: options.subdomain || null,
-    createdAt: now,
+    // flat source fields
+    sourceUrl,
+    sourceId: meigen.id,
+    model: meigen.model || null,
+    previewUrl: downloadUrl,
+    pinterest: { status: "pending", postId: null, pinUrl: null, publishedAt: null },
+    createdAt: meigen.created_at || now,
     updatedAt: now,
   };
 
   try {
-    await imageService.create(record);
+    await getOnyxBase().set(COLLECTIONS.prompts, `prompts:${id}`, record);
   } catch (err: any) {
     return { ok: false, failedStage: "record_creation", error: err.message };
   }

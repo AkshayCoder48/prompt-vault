@@ -12,8 +12,7 @@ export type Route =
   | { name: "latest" }
   | { name: "saved" }
   | { name: "about" }
-  | { name: "admin" }
-  | { name: "image"; id: string };
+  | { name: "admin" };
 
 interface AppState {
   route: Route;
@@ -53,7 +52,6 @@ function parseHash(hash: string): Route {
   if (parts[0] === "saved") return { name: "saved" };
   if (parts[0] === "about") return { name: "about" };
   if (parts[0] === "admin") return { name: "admin" };
-  if (parts[0] === "image" && parts[1]) return { name: "image", id: parts[1] };
   return { name: "home" };
 }
 
@@ -85,8 +83,6 @@ export function routeToHash(route: Route): string {
       return "#/about";
     case "admin":
       return "#/admin";
-    case "image":
-      return `#/image/${route.id}`;
   }
 }
 

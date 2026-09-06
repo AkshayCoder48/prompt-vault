@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { promptService } from "@/lib/onyxbase/prompts";
-import { imageService } from "@/lib/onyxbase/images";
 import { OnyxBaseError } from "@/lib/onyxbase/client";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Resolve the current host (or ?subdomain= for dev) to a record that has a
- * matching `subdomain` field. Prompts are checked first, then images.
+ * Resolve the current host (or ?subdomain= for dev) to a prompt record that has
+ * a matching `subdomain` field. Everything lives in the `prompts` collection now.
  *
- * Returns { ok: true, type: "prompt"|"image"|null, record? }.
+ * Returns { ok: true, type: "prompt"|null, record? }.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -19,14 +18,11 @@ export async function GET(req: NextRequest) {
     // 2. derive from Host header: "<subdomain>.<domain.com>"
     if (!subdomain) {
       const host = req.headers.get("host") || req.headers.get("x-forwarded-host") || "";
-      // strip port
       const hostname = host.split(":")[0].toLowerCase();
       const parts = hostname.split(".");
-      // e.g. myart.promptvault.vercel.app → first label
-      //      myart.example.com → first label
-      // ignore "www" and bare apex
-      if (parts.length >= 2 && parts[0] !== "www" && parts[0] !== "prompt-vault") {
-        // Only treat as subdomain if it's not the apex itself
+      // ignore "www", bare apex, and the vercel project slug
+      const reserved = new Set(["www", "prompt-vault", "prompt-vault-chi-seven"]);
+      if (parts.length >= 2 && !reserved.has(parts[0])) {
         subdomain = parts[0];
       }
     }
@@ -35,14 +31,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, type: null, subdomain: null });
     }
 
-    // search prompts first, then images
     const prompt = await promptService.getBySubdomain(subdomain);
     if (prompt) {
       return NextResponse.json({ ok: true, type: "prompt", subdomain, record: prompt });
-    }
-    const image = await imageService.findBySubdomain(subdomain);
-    if (image) {
-      return NextResponse.json({ ok: true, type: "image", subdomain, record: image });
     }
 
     return NextResponse.json({ ok: true, type: null, subdomain });

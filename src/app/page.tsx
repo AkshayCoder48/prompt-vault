@@ -12,7 +12,6 @@ import { CategoryListView } from "@/components/views/CategoryListView";
 import { SavedView } from "@/components/views/SavedView";
 import { AboutView } from "@/components/views/AboutView";
 import { AdminView } from "@/components/views/AdminView";
-import { ImageDetailView } from "@/components/views/ImageDetailView";
 import { Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SiteConfig } from "@/lib/onyxbase/types";
@@ -37,12 +36,10 @@ export default function Page() {
     const params = new URLSearchParams(window.location.search);
     const sub = params.get("subdomain");
     const url = sub ? `/api/resolve-host?subdomain=${encodeURIComponent(sub)}` : "/api/resolve-host";
-    api<{ ok: boolean; type: "prompt" | "image" | null; record?: any }>(url)
+    api<{ ok: boolean; type: "prompt" | null; record?: any }>(url)
       .then((r) => {
         if (r.ok && r.type === "prompt" && r.record?.slug) {
           navigate({ name: "prompt", id: r.record.slug });
-        } else if (r.ok && r.type === "image" && r.record?.id) {
-          navigate({ name: "image", id: r.record.id });
         }
       })
       .catch(() => {});
@@ -128,8 +125,6 @@ function renderRoute(route: ReturnType<typeof useAppStore.getState>["route"]) {
       return <AboutView />;
     case "admin":
       return <AdminView />;
-    case "image":
-      return <ImageDetailView id={route.id} />;
     default:
       return <HomeView />;
   }

@@ -20,7 +20,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Prompt, Category, Comment, SiteConfig } from "@/lib/onyxbase/types";
-import type { ImageRecord } from "@/lib/onyxbase/images";
 
 // ─── Admin API wrapper ──────────────────────────────────────
 async function adminApi<T = any>(path: string, init: RequestInit = {}): Promise<T> {
@@ -613,48 +612,52 @@ function IngestTab({ onIngested }: { onIngested: () => void }) {
 
 // ─── Images tab ─────────────────────────────────────────────
 function ImagesTab() {
-  const [items, setItems] = useState<ImageRecord[]>([]);
+  const [items, setItems] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const json = await api_get("/api/images");
-      setItems((json as any).items || []);
+      // everything lives in the prompts collection now; show those with an imageUrl
+      const json = await adminApi<{ items: Prompt[] }>("/api/admin/prompts");
+      setItems((json.items || []).filter((p) => p.imageUrl));
     } catch (err: any) { setError(err.message); }
     finally { setLoading(false); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <Spinner label="Loading images…" />;
+  if (loading) return <Spinner label="Loading prompts…" />;
   if (error) return <ErrorBox error={error} onRetry={load} />;
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">{items.length} ingested image record(s) in Onyx Base.</p>
+      <p className="text-sm text-muted-foreground">{items.length} prompt(s) with images in Onyx Base.</p>
       {items.length === 0 ? (
-        <Card className="p-8 text-center text-sm text-muted-foreground">No images ingested yet. Use the <strong>Ingest MeiGen</strong> tab.</Card>
+        <Card className="p-8 text-center text-sm text-muted-foreground">No prompts with images yet. Use the <strong>Ingest MeiGen</strong> tab, or add a record directly in Onyx Base.</Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((img) => (
-            <Card key={img.id} className="overflow-hidden p-0">
+          {items.map((p) => (
+            <Card key={p.id} className="overflow-hidden p-0">
               <div className="aspect-[16/9] bg-muted">
                 { }
-                <img src={img.imageUrl} alt={img.altText} className="h-full w-full object-cover" />
+                <img src={p.imageUrl || ""} alt={p.title} className="h-full w-full object-cover" />
               </div>
               <div className="p-3">
-                <h4 className="line-clamp-1 text-sm font-semibold">{img.title}</h4>
-                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{img.description}</p>
+                <h4 className="line-clamp-1 text-sm font-semibold">{p.title}</h4>
+                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {img.tags.slice(0, 3).map((t) => <Badge key={t} variant="secondary" className="text-[10px]">#{t}</Badge>)}
+                  {p.tags.slice(0, 3).map((t) => <Badge key={t} variant="secondary" className="text-[10px]">#{t}</Badge>)}
                 </div>
                 <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>by {img.source.authorDisplayName || img.source.authorUsername || "?"}</span>
-                  <a href={img.websiteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground">
+                  <span>by {p.authorName}</span>
+                  <a href={`/#/prompt/${p.slug}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground">
                     Open <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
+                {p.pinterest?.status && (
+                  <div className="mt-1 text-[10px] text-muted-foreground">Pinterest: {p.pinterest.status}</div>
+                )}
               </div>
             </Card>
           ))}
@@ -662,14 +665,6 @@ function ImagesTab() {
       )}
     </div>
   );
-}
-
-// small wrapper to avoid token on public route
-async function api_get(path: string) {
-  const res = await fetch(path, { credentials: "include" });
-  const json = await res.json();
-  if (!res.ok || !json.ok) throw new Error(json.error || `HTTP ${res.status}`);
-  return json;
 }
 
 // ─── Settings tab ───────────────────────────────────────────

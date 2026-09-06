@@ -1,33 +1,62 @@
 import { getOnyxBase, COLLECTIONS } from "./client";
 import type { Prompt, PromptFilters } from "./types";
 
-const KEY_PREFIX = "prompt:";
+const KEY_PREFIXES = ["prompt:", "prompts:"];
 
 function key(id: string) {
-  return `${KEY_PREFIX}${id}`;
+  return `${KEY_PREFIXES[0]}${id}`;
 }
 
-function fromId(id: string) {
-  return id.startsWith(KEY_PREFIX) ? id.slice(KEY_PREFIX.length) : id;
+/** Strip any known key prefix (prompt: or prompts:) to get the bare id. */
+function fromId(k: string) {
+  for (const p of KEY_PREFIXES) {
+    if (k.startsWith(p)) return k.slice(p.length);
+  }
+  return k;
 }
 
-/** Normalise a raw stored record into a Prompt. */
-function normalize(rec: { key: string; value: Partial<Prompt>; updatedAt?: string }): Prompt {
-  const v = rec.value;
+/** Derive a short title from a prompt's first line / first sentence. */
+function deriveTitle(prompt: string): string {
+  const text = (prompt || "").trim();
+  if (!text) return "Untitled";
+  // strip leading [SECTION] markers
+  const cleaned = text.replace(/^\[[A-Z _-]+\]\s*/i, "").trim();
+  const firstLine = cleaned.split("\n")[0];
+  const firstSentence = firstLine.split(/[.!]/)[0];
+  const t = (firstSentence || firstLine).trim();
+  if (t.length <= 70) return t;
+  return t.slice(0, 67).trim() + "…";
+}
+
+/** Derive a description from the prompt (first ~160 chars). */
+function deriveDescription(prompt: string): string {
+  const text = (prompt || "").trim();
+  if (!text) return "";
+  const flat = text.replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
+  if (flat.length <= 160) return flat;
+  return flat.slice(0, 157).trim() + "…";
+}
+
+/** Normalise a raw stored record into a Prompt. Accepts both the full schema
+ *  and a minimal schema ({prompt, imageUrl, author, sourceUrl, sourceId, model, pinterest}). */
+function normalize(rec: { key: string; value: any; updatedAt?: string }): Prompt {
+  const v = rec.value || {};
   const id = fromId(rec.key);
+  const promptText = v.prompt || "";
+  // `author` (flat) maps to `authorName`; `pinterest` is preserved as flat object
   return {
     id,
     slug: v.slug || id,
-    title: v.title || "Untitled",
-    description: v.description || "",
-    prompt: v.prompt || "",
-    imageUrl: v.imageUrl ?? null,
+    title: v.title || deriveTitle(promptText),
+    description: v.description || deriveDescription(promptText),
+    prompt: promptText,
+    imageUrl: v.imageUrl ?? v.previewUrl ?? null,
     imageAlt: v.imageAlt ?? null,
-    categoryId: v.categoryId || "cat_general",
-    authorName: v.authorName || "Anonymous",
+    categoryId: v.categoryId || null, // null = Uncategorized
+    authorName: v.authorName || v.author || "Anonymous",
     tags: Array.isArray(v.tags) ? v.tags : [],
     featured: !!v.featured,
-    published: v.published !== false,
+    published: v.published !== false, // default true
     seoTitle: v.seoTitle ?? null,
     seoDescription: v.seoDescription ?? null,
     views: Number(v.views) || 0,
@@ -35,6 +64,12 @@ function normalize(rec: { key: string; value: Partial<Prompt>; updatedAt?: strin
     likes: Number(v.likes) || 0,
     saves: Number(v.saves) || 0,
     subdomain: v.subdomain ?? null,
+    // flat source fields (minimal schema)
+    sourceUrl: v.sourceUrl ?? null,
+    sourceId: v.sourceId ?? null,
+    model: v.model ?? null,
+    previewUrl: v.previewUrl ?? null,
+    pinterest: v.pinterest ?? null,
     createdAt: v.createdAt || rec.updatedAt || new Date().toISOString(),
     updatedAt: v.updatedAt || rec.updatedAt || new Date().toISOString(),
   };
@@ -43,9 +78,12 @@ function normalize(rec: { key: string; value: Partial<Prompt>; updatedAt?: strin
 export const promptService = {
   async getById(id: string): Promise<Prompt | null> {
     const ob = getOnyxBase();
-    const rec = await ob.get<Prompt>(COLLECTIONS.prompts, key(id));
-    if (!rec) return null;
-    return normalize({ key: key(id), value: rec.value, updatedAt: rec.updatedAt });
+    // try both key prefixes (prompt: and prompts:) then bare id
+    for (const k of [key(id), `prompts:${id}`, id]) {
+      const rec = await ob.get<any>(COLLECTIONS.prompts, k);
+      if (rec) return normalize({ key: k, value: rec.value, updatedAt: rec.updatedAt });
+    }
+    return null;
   },
 
   async getBySlug(slug: string): Promise<Prompt | null> {
@@ -97,7 +135,9 @@ export const promptService = {
     let items = await this.listPublished();
 
     if (filters.category) {
-      items = items.filter((p) => p.categoryId === filters.category || p.categoryId === `cat_${filters.category}`);
+      items = items.filter(
+        (p) => p.categoryId === filters.category || p.categoryId === `cat_${filters.category}`
+      );
     }
     if (filters.tag) {
       items = items.filter((p) => p.tags.map((t) => t.toLowerCase()).includes(filters.tag!.toLowerCase()));
@@ -108,7 +148,7 @@ export const promptService = {
     if (filters.q) {
       const q = filters.q.toLowerCase().trim();
       items = items.filter((p) => {
-        const haystack = [p.title, p.description, p.prompt, p.authorName, p.tags.join(" "), p.categoryId]
+        const haystack = [p.title, p.description, p.prompt, p.authorName, p.tags.join(" "), p.categoryId || ""]
           .join(" ")
           .toLowerCase();
         return haystack.includes(q);

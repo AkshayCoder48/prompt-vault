@@ -8,7 +8,7 @@ export interface Prompt {
   prompt: string;
   imageUrl: string | null;
   imageAlt?: string | null;
-  categoryId: string;
+  categoryId: string | null; // null = Uncategorized
   authorName: string;
   tags: string[];
   featured: boolean;
@@ -21,6 +21,12 @@ export interface Prompt {
   saves: number;
   /** Optional subdomain slug mapped to this prompt (e.g. "myart" → myart.domain.com). */
   subdomain?: string | null;
+  // flat source fields (minimal schema — directly authored records)
+  sourceUrl?: string | null;
+  sourceId?: string | null;
+  model?: string | null;
+  previewUrl?: string | null;
+  pinterest?: { status?: string; postId?: string | null; pinUrl?: string | null; publishedAt?: string | null } | null;
   createdAt: string;
   updatedAt: string;
 }
