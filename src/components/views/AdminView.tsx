@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { proxiedImage } from "@/lib/api-client";
 import type { Prompt, Category, Comment, SiteConfig } from "@/lib/onyxbase/types";
 
 // ─── Admin API wrapper ──────────────────────────────────────
@@ -641,7 +642,7 @@ function ImagesTab() {
             <Card key={p.id} className="overflow-hidden p-0">
               <div className="aspect-[16/9] bg-muted">
                 { }
-                <img src={p.imageUrl || ""} alt={p.title} className="h-full w-full object-cover" />
+                <img src={proxiedImage(p.imageUrl) || ""} alt={p.title} className="h-full w-full object-cover" />
               </div>
               <div className="p-3">
                 <h4 className="line-clamp-1 text-sm font-semibold">{p.title}</h4>

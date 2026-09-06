@@ -31,3 +31,24 @@ export async function api<T = any>(
 export function cn(...args: Array<string | false | undefined | null>) {
   return args.filter(Boolean).join(" ");
 }
+
+/**
+ * Wrap an external image URL with the server-side image proxy.
+ *
+ * Why: some image hosts (e.g. MeiGen) have hotlink protection — they return 403
+ * when the browser's Referer header is a third-party domain, which breaks <img>
+ * tags. The proxy fetches server-side with no Referer and adds permissive CORS
+ * headers, so the image renders reliably from any origin.
+ *
+ * Pass the raw imageUrl through this before putting it into <img src>.
+ * `null` / empty → returns null (caller renders a placeholder).
+ */
+export function proxiedImage(url: string | null | undefined): string | null {
+  if (!url) return null;
+  // Don't double-proxy, and don't proxy relative/data URLs.
+  if (url.startsWith("/api/img?") || url.startsWith("data:") || url.startsWith("blob:")) {
+    return url;
+  }
+  return `/api/img?url=${encodeURIComponent(url)}`;
+}
+

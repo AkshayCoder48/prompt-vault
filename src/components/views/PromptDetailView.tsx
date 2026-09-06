@@ -12,7 +12,7 @@ import {
   Loader2,
   ArrowLeft,
 } from "lucide-react";
-import { api } from "@/lib/api-client";
+import { api, proxiedImage } from "@/lib/api-client";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -232,7 +232,7 @@ export function PromptDetailView({ slug }: { slug: string }) {
           <div className="aspect-[16/9] bg-muted">
             { }
             <img
-              src={prompt.imageUrl}
+              src={proxiedImage(prompt.imageUrl) || undefined}
               alt={prompt.imageAlt || prompt.title}
               className="h-full w-full object-cover"
             />

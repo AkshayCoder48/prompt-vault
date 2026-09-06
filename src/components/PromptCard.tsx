@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { api } from "@/lib/api-client";
+import { api, proxiedImage } from "@/lib/api-client";
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -41,7 +41,7 @@ export function PromptCard({ prompt, category, className }: PromptCardProps) {
         {prompt.imageUrl ? (
            
           <img
-            src={prompt.imageUrl}
+            src={proxiedImage(prompt.imageUrl) || undefined}
             alt={prompt.imageAlt || prompt.title}
             loading="lazy"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
