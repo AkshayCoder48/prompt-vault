@@ -18,12 +18,19 @@ import * as path from "path";
 let _zai: any = null;
 async function getLLM() {
   if (!_zai) {
-    // On serverless (Vercel), write the config from env to a temp file the SDK can read.
+    // On serverless (Vercel), write the config from env to a file the SDK can read.
+    // The SDK checks process.cwd(), $HOME, and /etc — only $HOME is reliably writable.
     const envCfg = process.env.ZAI_CONFIG;
     if (envCfg) {
-      const tmpDir = process.env.TMPDIR || "/tmp";
-      const cfgPath = path.join(tmpDir, ".z-ai-config");
-      try { fs.writeFileSync(cfgPath, envCfg); } catch { /* ignore */ }
+      const home = process.env.HOME || process.env.HOMEPATH || "/tmp";
+      const candidates = [
+        path.join(home, ".z-ai-config"),
+        path.join(process.cwd(), ".z-ai-config"),
+        "/tmp/.z-ai-config",
+      ];
+      for (const cfgPath of candidates) {
+        try { fs.writeFileSync(cfgPath, envCfg); break; } catch { /* try next */ }
+      }
     }
     _zai = await ZAI.create();
   }
