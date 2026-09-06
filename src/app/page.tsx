@@ -33,7 +33,11 @@ export default function Page() {
   useEffect(() => {
     // skip if the user is already on a specific content route
     if (window.location.hash && window.location.hash !== "#/" && window.location.hash !== "#") return;
-    api<{ ok: boolean; type: "prompt" | "image" | null; record?: any }>("/api/resolve-host")
+    // forward ?subdomain= (for local dev / testing) — the server also reads the Host header
+    const params = new URLSearchParams(window.location.search);
+    const sub = params.get("subdomain");
+    const url = sub ? `/api/resolve-host?subdomain=${encodeURIComponent(sub)}` : "/api/resolve-host";
+    api<{ ok: boolean; type: "prompt" | "image" | null; record?: any }>(url)
       .then((r) => {
         if (r.ok && r.type === "prompt" && r.record?.slug) {
           navigate({ name: "prompt", id: r.record.slug });
@@ -43,7 +47,6 @@ export default function Page() {
       })
       .catch(() => {});
     // run once on mount
-     
   }, []);
 
   // maintenance gate (admin route always accessible)
