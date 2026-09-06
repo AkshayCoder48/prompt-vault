@@ -39,6 +39,9 @@ export interface Category {
   imageUrl?: string | null;
   featured: boolean;
   promptCount?: number;
+  /** Prompt ids that belong to this category. The category's image is the
+   *  first prompt's image (promptIds[0]). Edit this list to add/remove prompts. */
+  promptIds?: string[];
   createdAt: string;
 }
 

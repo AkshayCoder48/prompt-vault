@@ -1,5 +1,6 @@
 import { getOnyxBase, COLLECTIONS } from "./client";
 import type { Prompt, PromptFilters } from "./types";
+import { categoryService } from "./categories";
 
 const KEY_PREFIXES = ["prompt:", "prompts:"];
 
@@ -135,9 +136,16 @@ export const promptService = {
     let items = await this.listPublished();
 
     if (filters.category) {
-      items = items.filter(
-        (p) => p.categoryId === filters.category || p.categoryId === `cat_${filters.category}`
-      );
+      // Resolve the category (by slug or id) and filter prompts by promptIds membership.
+      const cat = await categoryService.getBySlug(filters.category).catch(() => null)
+        || await categoryService.getById(filters.category).catch(() => null);
+      if (cat && cat.promptIds?.length) {
+        const idSet = new Set(cat.promptIds);
+        items = items.filter((p) => idSet.has(p.id) || idSet.has(p.slug));
+      } else if (cat) {
+        // category exists but has no promptIds — match by legacy categoryId
+        items = items.filter((p) => p.categoryId === cat.id || p.categoryId === cat.slug);
+      }
     }
     if (filters.tag) {
       items = items.filter((p) => p.tags.map((t) => t.toLowerCase()).includes(filters.tag!.toLowerCase()));

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { LayoutGrid, Loader2 } from "lucide-react";
-import { api } from "@/lib/api-client";
+import { api, proxiedImage } from "@/lib/api-client";
 import { useAppStore } from "@/lib/store";
 import type { Category } from "@/lib/onyxbase/types";
 import { formatCount } from "@/lib/format";
@@ -56,8 +56,15 @@ export function CategoryListView() {
               onClick={() => navigate({ name: "category", slug: c.slug })}
               className="group flex items-start gap-4 rounded-xl border border-border bg-card p-5 text-left transition-all hover:border-primary/40 hover:shadow-md"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-lg font-bold text-primary">
-                {c.name.charAt(0)}
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-primary/10">
+                {c.imageUrl ? (
+                   
+                  <img src={proxiedImage(c.imageUrl) || undefined} alt={c.name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-lg font-bold text-primary">
+                    {c.name.charAt(0)}
+                  </div>
+                )}
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">

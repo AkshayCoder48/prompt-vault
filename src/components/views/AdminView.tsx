@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   LayoutDashboard, FileText, FolderTree, MessageSquare, Settings as SettingsIcon,
-  Sparkles, LogOut, Loader2, Plus, Pencil, Trash2, Check, X, Search,
-  DownloadCloud, ExternalLink, Image as ImageIcon, ShieldCheck, AlertTriangle,
+  Sparkles, LogOut, Loader2, Plus, Pencil, Trash2, Check, X,
+  ExternalLink, Image as ImageIcon, ShieldCheck, AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,7 +95,6 @@ export function AdminView() {
           <TabsTrigger value="prompts" className="gap-1.5"><FileText className="h-4 w-4" /> Prompts</TabsTrigger>
           <TabsTrigger value="categories" className="gap-1.5"><FolderTree className="h-4 w-4" /> Categories</TabsTrigger>
           <TabsTrigger value="comments" className="gap-1.5"><MessageSquare className="h-4 w-4" /> Comments</TabsTrigger>
-          <TabsTrigger value="ingest" className="gap-1.5"><DownloadCloud className="h-4 w-4" /> Ingest MeiGen</TabsTrigger>
           <TabsTrigger value="images" className="gap-1.5"><ImageIcon className="h-4 w-4" /> Images</TabsTrigger>
           <TabsTrigger value="settings" className="gap-1.5"><SettingsIcon className="h-4 w-4" /> Settings</TabsTrigger>
         </TabsList>
@@ -104,7 +103,6 @@ export function AdminView() {
         <TabsContent value="prompts"><PromptsTab /></TabsContent>
         <TabsContent value="categories"><CategoriesTab /></TabsContent>
         <TabsContent value="comments"><CommentsTab /></TabsContent>
-        <TabsContent value="ingest"><IngestTab onIngested={() => setTab("images")} /></TabsContent>
         <TabsContent value="images"><ImagesTab /></TabsContent>
         <TabsContent value="settings"><SettingsTab /></TabsContent>
       </Tabs>
@@ -453,13 +451,19 @@ function CategoriesTab() {
 }
 
 function CategoryDialog({ category, onClose, onSaved }: { category: Category | null; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState<any>(category ? { ...category } : { name: "", slug: "", description: "", imageUrl: "", featured: false });
+  const [form, setForm] = useState<any>(category
+    ? { ...category, promptIds: (category.promptIds || []).join(", ") }
+    : { name: "", slug: "", description: "", imageUrl: "", promptIds: "", featured: false });
   const [saving, setSaving] = useState(false);
   const save = async () => {
     setSaving(true);
     try {
-      if (category) { await adminApi(`/api/admin/categories/${category.id}`, { method: "PATCH", body: JSON.stringify(form) }); toast.success("Category updated"); }
-      else { await adminApi("/api/admin/categories", { method: "POST", body: JSON.stringify(form) }); toast.success("Category created"); }
+      const payload = {
+        ...form,
+        promptIds: (form.promptIds || "").split(",").map((s: string) => s.trim()).filter(Boolean),
+      };
+      if (category) { await adminApi(`/api/admin/categories/${category.id}`, { method: "PATCH", body: JSON.stringify(payload) }); toast.success("Category updated"); }
+      else { await adminApi("/api/admin/categories", { method: "POST", body: JSON.stringify(payload) }); toast.success("Category created"); }
       onSaved();
     } catch (err: any) { toast.error(err.message); }
     finally { setSaving(false); }
@@ -472,7 +476,8 @@ function CategoryDialog({ category, onClose, onSaved }: { category: Category | n
           <Field label="Name"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
           <Field label="Slug"><Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></Field>
           <Field label="Description"><Textarea value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} /></Field>
-          <Field label="Image URL"><Input value={form.imageUrl || ""} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} /></Field>
+          <Field label="Prompt IDs (comma-separated — category image = first prompt's image)"><Textarea value={form.promptIds || ""} onChange={(e) => setForm({ ...form, promptIds: e.target.value })} rows={3} className="font-mono text-xs" placeholder="prompt-id-1, prompt-id-2" /></Field>
+          <Field label="Image URL (optional — leave empty to use first prompt's image)"><Input value={form.imageUrl || ""} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} /></Field>
           <label className="flex items-center gap-2 text-sm"><Switch checked={form.featured} onCheckedChange={(v) => setForm({ ...form, featured: v })} /> Featured</label>
         </div>
         <DialogFooter>
@@ -536,80 +541,6 @@ function CommentsTab() {
   );
 }
 
-// ─── Ingest tab (MeiGen) ────────────────────────────────────
-function IngestTab({ onIngested }: { onIngested: () => void }) {
-  const [meigenId, setMeigenId] = useState("");
-  const [ingestSubdomain, setIngestSubdomain] = useState("");
-  const [query, setQuery] = useState("Male");
-  const [limit, setLimit] = useState("10");
-  const [busy, setBusy] = useState(false);
-  const [log, setLog] = useState<string[]>([]);
-
-  const ingestOne = async () => {
-    if (!meigenId.trim()) { toast.error("Enter a MeiGen image id"); return; }
-    setBusy(true);
-    setLog((l) => [`→ Ingesting ${meigenId}…`, ...l]);
-    try {
-      const r = await adminApi<any>("/api/admin/ingest", { method: "POST", body: JSON.stringify({ meigenId: meigenId.trim(), subdomain: ingestSubdomain.trim() || undefined }) });
-      if (r.ok && r.duplicate) { setLog((l) => [`✓ Duplicate — already ingested: ${r.record?.id}`, ...l]); toast.info("Already ingested (duplicate)"); }
-      else if (r.ok) { setLog((l) => [`✓ Ingested: ${r.record.title} → ${r.record.websiteUrl}${r.record.subdomain ? ` (subdomain: ${r.record.subdomain})` : ""}`, ...l]); toast.success("Ingested"); setMeigenId(""); }
-      else { setLog((l) => [`✗ Failed at ${r.failedStage}: ${r.error}`, ...l]); toast.error(`Failed: ${r.error}`); }
-    } catch (err: any) { setLog((l) => [`✗ ${err.message}`, ...l]); toast.error(err.message); }
-    finally { setBusy(false); }
-  };
-
-  const ingestBatch = async () => {
-    if (!query.trim()) { toast.error("Enter a search query"); return; }
-    setBusy(true);
-    setLog((l) => [`→ Batch ingesting "${query}" (limit ${limit})…`, ...l]);
-    try {
-      const r = await adminApi<any>("/api/admin/ingest/batch", { method: "POST", body: JSON.stringify({ query: query.trim(), limit: Number(limit) }) });
-      setLog((l) => [`✓ Batch done: ${r.ingested} new, ${r.duplicates} dupes, ${r.failed} failed (of ${r.total})`, ...l]);
-      toast.success(`Ingested ${r.ingested} new images`);
-      onIngested();
-    } catch (err: any) { setLog((l) => [`✗ ${err.message}`, ...l]); toast.error(err.message); }
-    finally { setBusy(false); }
-  };
-
-  return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="space-y-4">
-        <Card className="p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold"><DownloadCloud className="h-4 w-4" /> Ingest a single existing MeiGen image</h3>
-          <p className="mb-3 text-xs text-muted-foreground">Fetches an existing gallery image, downloads it, uploads to Onyx Base, generates metadata via the LLM, and creates a canonical record. <strong>Does not generate a new image.</strong></p>
-          <div className="flex gap-2">
-            <Input value={meigenId} onChange={(e) => setMeigenId(e.target.value)} placeholder="e.g. 2009629483448627597" />
-            <Button onClick={ingestOne} disabled={busy} className="gap-1.5">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <DownloadCloud className="h-4 w-4" />} Ingest</Button>
-          </div>
-          <div className="mt-2">
-            <Input value={ingestSubdomain} onChange={(e) => setIngestSubdomain(e.target.value)} placeholder="Subdomain slug (optional — e.g. myart)" className="h-9" />
-          </div>
-        </Card>
-        <Card className="p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold"><Search className="h-4 w-4" /> Batch ingest from MeiGen search</h3>
-          <p className="mb-3 text-xs text-muted-foreground">Searches MeiGen and ingests each result. Duplicates are auto-skipped via Onyx Base lookup.</p>
-          <div className="flex gap-2">
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search query (e.g. Male)" />
-            <Input value={limit} onChange={(e) => setLimit(e.target.value)} className="w-20" type="number" min={1} max={100} />
-            <Button onClick={ingestBatch} disabled={busy} variant="outline" className="gap-1.5">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <DownloadCloud className="h-4 w-4" />} Batch</Button>
-          </div>
-        </Card>
-      </div>
-      <Card className="p-4">
-        <h3 className="mb-3 text-sm font-semibold">Activity log</h3>
-        {log.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No activity yet. Ingest an image to begin.</p>
-        ) : (
-          <div className="max-h-96 space-y-1 overflow-y-auto font-mono text-xs">
-            {log.map((line, i) => (
-              <div key={i} className={cn(line.startsWith("✗") && "text-destructive", line.startsWith("✓") && "text-emerald-600")}>{line}</div>
-            ))}
-          </div>
-        )}
-      </Card>
-    </div>
-  );
-}
 
 // ─── Images tab ─────────────────────────────────────────────
 function ImagesTab() {
@@ -635,7 +566,7 @@ function ImagesTab() {
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">{items.length} prompt(s) with images in Onyx Base.</p>
       {items.length === 0 ? (
-        <Card className="p-8 text-center text-sm text-muted-foreground">No prompts with images yet. Use the <strong>Ingest MeiGen</strong> tab, or add a record directly in Onyx Base.</Card>
+        <Card className="p-8 text-center text-sm text-muted-foreground">No prompts with images yet. Add a record directly in Onyx Base.</Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((p) => (
@@ -656,9 +587,6 @@ function ImagesTab() {
                     Open <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
-                {p.pinterest?.status && (
-                  <div className="mt-1 text-[10px] text-muted-foreground">Pinterest: {p.pinterest.status}</div>
-                )}
               </div>
             </Card>
           ))}
