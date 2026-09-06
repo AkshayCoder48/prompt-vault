@@ -134,3 +134,26 @@ Stage Summary:
 - No default admin password — must be set in Onyx Base.
 - Admin panel hidden from public — only reachable at /#/admin?k=<accessKey> where accessKey is stored in Onyx Base.
 - GitHub + Vercel in sync (commit a2f1c3b).
+
+---
+Task ID: C (categories redesign + cleanup + dedupe fix)
+Agent: orchestrator
+Task: Remove test posts, remove ingest tab, hide pinterest status, redesign categories (promptIds), fix duplicate keys
+
+Work Log:
+- Deleted all test/duplicate data from Onyx Base (menswear, cereal, analytics, old category, like markers). Cleaned prompt: prefixed duplicates. Remaining: 11 user prompts + site:config.
+- Redesigned categories: each category record holds a promptIds[] array. Category image = first prompt's image (promptIds[0]). Categories created/edited by modifying the promptIds list. Backward compatible with old schema.
+- categoryService.list() fetches categories + prompts in parallel, resolves category images from first prompt
+- prompt search filter uses promptIds membership (resolves category by slug/id)
+- Admin: removed Ingest MeiGen tab entirely. Categories dialog now has promptIds textarea (comma-separated).
+- Admin: Images tab no longer shows pinterest status (kept in raw Onyx Base records, hidden from UI)
+- CategoryListView shows category image (proxied) when available
+- FIXED duplicate-key bug: update() was writing back under prompt: prefix even when the record was stored under prompts: — creating duplicates on every view/copy. Now update() writes to the SAME key found by _findRaw(). listAll() dedupes by id (prefers prompts: prefix). remove() deletes all key variants.
+- Verified on production: 11 prompts, no duplicates, full-size images (object-contain), no admin link in footer
+
+Stage Summary:
+- Onyx Base clean (only user's real prompts + site:config)
+- Categories are promptIds-based lists (edit the record to add/remove prompts)
+- No more duplicate keys on update
+- Ingest tab removed; pinterest status hidden from UI
+- GitHub + Vercel in sync (commit dc6f9d7)

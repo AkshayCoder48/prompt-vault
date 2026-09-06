@@ -176,20 +176,37 @@ and the bare apex.
 | `search_terms` | `term:<term>` | search counters (app) |
 
 ### Category record (`categories` collection, key `cat:<id>`)
+
+A category is a **list of prompt IDs**. The category's image is automatically the
+first prompt's image (`promptIds[0]`). Create/edit categories by adding prompt
+IDs to the list.
+
 ```json
 {
-  "id": "cat_ai_art",
-  "name": "AI Art",
-  "slug": "ai-art",
-  "description": "Generative art",
+  "name": "Landscapes",
+  "slug": "landscapes",
+  "description": "Scenic nature prompts",
+  "promptIds": ["prompt-id-1", "prompt-id-2", "prompt-id-3"],
   "imageUrl": null,
   "featured": true,
-  "promptCount": 0,
-  "createdAt": "2026-09-05T00:00:00.000Z"
+  "createdAt": "2026-09-06T00:00:00.000Z"
 }
 ```
-`promptCount` is recomputed live — leave it `0`. Reference a category from a
-prompt by setting `categoryId` to the category's `id`.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | yes | display name |
+| `slug` | string | no | derived from name if absent |
+| `description` | string\|null | no | |
+| `promptIds` | string[] | no | **prompt ids belonging to this category**. Category image = first prompt's image. Edit this list to add/remove prompts. |
+| `imageUrl` | string\|null | no | override (leave empty to use first prompt's image) |
+| `featured` | boolean | no | shows in homepage category strip |
+
+`promptCount` is computed live from `promptIds.length` — leave it out.
+
+A prompt belongs to a category if its `id` appears in that category's `promptIds`.
+The prompt's own `categoryId` field is legacy and ignored when categories use `promptIds`.
+
 
 ---
 
