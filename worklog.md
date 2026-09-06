@@ -79,3 +79,28 @@ Stage Summary:
 - Minimal schema works: only `prompt` is required; title/description derived automatically.
 - The user's cereal prompt renders on production.
 - GitHub + Vercel in sync (commit 0793d2f).
+
+---
+Task ID: P (image proxy for CORS/hotlink fix)
+Agent: orchestrator
+Task: Fix broken images caused by MeiGen hotlink protection (403 on third-party Referer)
+
+Work Log:
+- Diagnosed: images.meigen.ai returns 200 with no Referer, but 403 when Referer is prompt-vault.vercel.app (hotlink protection). Plain <img> tags send a Referer → broken.
+- Also discovered MeiGen blocks bot-like User-Agents (e.g. "Mozilla/5.0 (compatible; PromptVaultImageProxy/1.0)" → 403) but serves real browser UAs.
+- Built /api/img?url= server-side image proxy route:
+  - Fetches upstream with a realistic Chrome UA + no Referer/Origin → bypasses both hotlink + bot-UA blocks
+  - Streams bytes back with content-type passthrough + Access-Control-Allow-Origin:* + 7-day cache
+  - Validates content-type is image/* + caps size at 10MB
+  - Handles OPTIONS for CORS preflight
+- Added proxiedImage() helper in src/lib/api-client.ts (wraps any imageUrl as /api/img?url=<encoded>)
+- Wired proxiedImage() into PromptCard, PromptDetailView hero image, AdminView ImagesTab
+- Deployed to Vercel; verified on production:
+  - /api/img?url=<meigen> → HTTP 200, image/webp, 175KB (Cloudflare auto-converts PNG→WebP)
+  - Home page: all 4 cards render images (firstImgLoaded: true, naturalWidth > 0)
+  - Detail page: hero image renders (heroLoaded: true)
+
+Stage Summary:
+- All external images now route through /api/img proxy → no more broken/CORS-blocked images.
+- Works for images.meigen.ai AND any future hotlink-protected host.
+- GitHub + Vercel in sync (commit bfbcb3c).
