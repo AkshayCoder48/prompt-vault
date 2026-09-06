@@ -11,6 +11,7 @@ import {
   Check,
   Loader2,
   ArrowLeft,
+  Sparkles,
 } from "lucide-react";
 import { api, proxiedImage } from "@/lib/api-client";
 import { useAppStore } from "@/lib/store";
@@ -331,6 +332,9 @@ export function PromptDetailView({ slug }: { slug: string }) {
         </section>
       )}
 
+      {/* AI similar prompts */}
+      <AISimilarSection promptId={prompt.id} catMap={catMap} />
+
       {/* Inline ad */}
       <div className="mt-8">
         <AdSlot placement="prompt-inline" config={config as any} className="h-20" />
@@ -345,5 +349,62 @@ export function PromptDetailView({ slug }: { slug: string }) {
         />
       </section>
     </div>
+  );
+}
+
+/** AI-powered similar prompts — fetches on demand via /api/prompts/[id]/similar. */
+function AISimilarSection({ promptId, catMap }: { promptId: string; catMap: Map<string, any> }) {
+  const [matches, setMatches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api<{ ok: boolean; matches: any[] }>(`/api/prompts/${promptId}/similar`);
+      setMatches(res.matches || []);
+      setLoaded(true);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!loaded) {
+    return (
+      <section className="mt-10">
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-xl font-bold"><Sparkles className="h-5 w-5 text-primary" /> AI similar prompts</h2>
+          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-1.5">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {loading ? "Analyzing…" : "Find similar"}
+          </Button>
+        </div>
+        {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-10">
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-xl font-bold"><Sparkles className="h-5 w-5 text-primary" /> AI similar prompts</h2>
+        <Button variant="ghost" size="sm" onClick={load} disabled={loading} className="gap-1.5">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Refresh
+        </Button>
+      </div>
+      {matches.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">No similar prompts found.</p>
+      ) : (
+        <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {matches.map((m) => (
+            <PromptCard key={m.prompt.id} prompt={m.prompt} category={catMap.get(m.prompt.categoryId) || null} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

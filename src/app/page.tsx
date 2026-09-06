@@ -11,6 +11,7 @@ import { PromptDetailView } from "@/components/views/PromptDetailView";
 import { CategoryListView } from "@/components/views/CategoryListView";
 import { SavedView } from "@/components/views/SavedView";
 import { AboutView } from "@/components/views/AboutView";
+import { PromptLabView } from "@/components/views/PromptLabView";
 import { AdminView } from "@/components/views/AdminView";
 import { Wrench, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -123,6 +124,8 @@ function renderRoute(route: ReturnType<typeof useAppStore.getState>["route"]) {
       return <SavedView />;
     case "about":
       return <AboutView />;
+    case "lab":
+      return <PromptLabView />;
     case "admin":
       return <AdminGate />;
     default:

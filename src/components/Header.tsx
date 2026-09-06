@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Menu, X, Sparkles, Bookmark, Flame, Clock, LayoutGrid, Info } from "lucide-react";
+import { Search, Menu, X, Sparkles, Bookmark, Flame, Clock, LayoutGrid, Info, FlaskConical } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  { name: "lab" as const, label: "PromptLab", icon: FlaskConical },
   { name: "trending" as const, label: "Trending", icon: Flame },
   { name: "latest" as const, label: "Latest", icon: Clock },
   { name: "categories" as const, label: "Categories", icon: LayoutGrid },

@@ -12,6 +12,7 @@ export type Route =
   | { name: "latest" }
   | { name: "saved" }
   | { name: "about" }
+  | { name: "lab" }
   | { name: "admin" };
 
 interface AppState {
@@ -51,6 +52,7 @@ function parseHash(hash: string): Route {
   if (parts[0] === "latest") return { name: "latest" };
   if (parts[0] === "saved") return { name: "saved" };
   if (parts[0] === "about") return { name: "about" };
+  if (parts[0] === "lab") return { name: "lab" };
   if (parts[0] === "admin") return { name: "admin" };
   return { name: "home" };
 }
@@ -81,6 +83,8 @@ export function routeToHash(route: Route): string {
       return "#/saved";
     case "about":
       return "#/about";
+    case "lab":
+      return "#/lab";
     case "admin":
       return "#/admin";
   }
