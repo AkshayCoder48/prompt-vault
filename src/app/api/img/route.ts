@@ -46,13 +46,16 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Fetch WITHOUT a Referer header (and with a neutral UA) to bypass hotlink protection.
+    // Fetch WITHOUT a Referer header but WITH a realistic browser User-Agent.
+    // MeiGen's hotlink protection blocks bot-like UAs (e.g. "compatible; …Proxy")
+    // and third-party Referers, but serves a real browser UA with no Referer.
     const upstream = await fetch(target.toString(), {
       headers: {
-        // No Referer / Origin → many CDNs that gate on Referer will serve normally.
         "User-Agent":
-          "Mozilla/5.0 (compatible; PromptVaultImageProxy/1.0)",
-        Accept: "image/*,*/*;q=0.8",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        // Explicitly no Referer / Origin → avoids third-party-domain 403s.
       },
       redirect: "follow",
     });
